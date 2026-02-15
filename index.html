@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webcam Clock Duel</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>⏰ Webcam Clock Duel (2 играчи)</h1>
+        <p>
+          Задачата е: <strong id="target-time">--:--</strong>. Всеки играч настройва
+          своя часовник с ръце: <b>дясна</b> за час и <b>лява</b> за минути.
+        </p>
+        <button id="new-round">Нова задача</button>
+      </header>
+
+      <section class="layout">
+        <article class="panel video-panel">
+          <h2>Камера</h2>
+          <video id="webcam" autoplay playsinline muted></video>
+          <div class="hint">Лявата половина на екрана е Играч 1, дясната е Играч 2.</div>
+        </article>
+
+        <article class="panel clocks-panel">
+          <h2>Часовници</h2>
+          <div class="clocks">
+            <div class="clock-card">
+              <h3>Играч 1</h3>
+              <canvas id="clock-p1" width="280" height="280"></canvas>
+              <p id="readout-p1">--:--</p>
+            </div>
+            <div class="clock-card">
+              <h3>Играч 2</h3>
+              <canvas id="clock-p2" width="280" height="280"></canvas>
+              <p id="readout-p2">--:--</p>
+            </div>
+          </div>
+          <p id="status">Чакаме разпознаване на ръце…</p>
+          <p id="score">Рундове: 0</p>
+        </article>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
