@@ -9,43 +9,49 @@
   <body>
     <main class="app">
       <header>
-        <h1>⏰ Webcam Clock Duel (2 играчи)</h1>
+        <h1>⏰ Clock Duel (2 играчи)</h1>
         <p>
-          Задачата е: <strong id="target-time">--:--</strong>. Всеки играч настройва
-          своя часовник с ръце: <b>дясна</b> за час и <b>лява</b> за минути.
+          Обща задача: и двамата играчи виждат едно и също време. Който го
+          настрои пръв, взима точка. Първият до 10 точки печели.
         </p>
-        <button id="new-round">Нова задача</button>
       </header>
 
-      <section class="layout">
-        <article class="panel video-panel">
-          <h2>Камера</h2>
-          <video id="webcam" autoplay playsinline muted></video>
-          <div class="hint">Лявата половина на екрана е Играч 1, дясната е Играч 2.</div>
+      <section class="panel target-panel">
+        <h2>Обща задача</h2>
+        <div class="target-wrap">
+          <canvas id="target-clock" width="320" height="320"></canvas>
+          <div>
+            <p class="target-readout">Нагласи: <strong id="target-time">--:--</strong></p>
+            <p id="status">Чакаме разпознаване на ръце…</p>
+            <button id="new-round" type="button">Следваща задача</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel video-panel">
+        <h2>Камера</h2>
+        <video id="webcam" autoplay playsinline muted></video>
+        <div class="hint">Лява половина: Играч 1 | Дясна половина: Играч 2</div>
+      </section>
+
+      <section class="players-grid">
+        <article class="panel clock-card">
+          <h3>Играч 1</h3>
+          <canvas id="clock-p1" width="280" height="280"></canvas>
+          <p id="readout-p1">--:--</p>
+          <p id="score-p1">Точки: 0</p>
         </article>
 
-        <article class="panel clocks-panel">
-          <h2>Часовници</h2>
-          <div class="clocks">
-            <div class="clock-card">
-              <h3>Играч 1</h3>
-              <canvas id="clock-p1" width="280" height="280"></canvas>
-              <p id="readout-p1">--:--</p>
-            </div>
-            <div class="clock-card">
-              <h3>Играч 2</h3>
-              <canvas id="clock-p2" width="280" height="280"></canvas>
-              <p id="readout-p2">--:--</p>
-            </div>
-          </div>
-          <p id="status">Чакаме разпознаване на ръце…</p>
-          <p id="score">Рундове: 0</p>
+        <article class="panel clock-card">
+          <h3>Играч 2</h3>
+          <canvas id="clock-p2" width="280" height="280"></canvas>
+          <p id="readout-p2">--:--</p>
+          <p id="score-p2">Точки: 0</p>
         </article>
       </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="app.js"></script>
   </body>

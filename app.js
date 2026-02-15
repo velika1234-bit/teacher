@@ -1,24 +1,33 @@
 const webcam = document.getElementById('webcam');
 const targetTimeEl = document.getElementById('target-time');
 const statusEl = document.getElementById('status');
-const scoreEl = document.getElementById('score');
 const readoutEls = {
   p1: document.getElementById('readout-p1'),
   p2: document.getElementById('readout-p2'),
 };
+const scoreEls = {
+  p1: document.getElementById('score-p1'),
+  p2: document.getElementById('score-p2'),
+};
 
 const clocks = {
+  target: document.getElementById('target-clock').getContext('2d'),
   p1: document.getElementById('clock-p1').getContext('2d'),
   p2: document.getElementById('clock-p2').getContext('2d'),
 };
 
+const WIN_POINTS = 10;
+const TASK_POOL_SIZE = 120;
+
 const state = {
+  gameOver: false,
+  resolvingRound: false,
+  tasks: [],
   targetHour: 12,
   targetMinute: 0,
-  rounds: 0,
   players: {
-    p1: { hour: 12, minute: 0, hasHour: false, hasMinute: false },
-    p2: { hour: 12, minute: 0, hasHour: false, hasMinute: false },
+    p1: { hour: 12, minute: 0, hasHour: false, hasMinute: false, score: 0 },
+    p2: { hour: 12, minute: 0, hasHour: false, hasMinute: false, score: 0 },
   },
 };
 
@@ -29,29 +38,18 @@ function formatTime(hour, minute) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-function generateRound() {
-  state.targetHour = Math.floor(Math.random() * 12) + 1;
-  state.targetMinute = Math.floor(Math.random() * 12) * 5;
-  targetTimeEl.textContent = formatTime(state.targetHour, state.targetMinute);
-  statusEl.textContent = 'Нов рунд! Настройте часовниците.';
+function buildTaskPool() {
+  const tasks = [];
+  while (tasks.length < TASK_POOL_SIZE) {
+    tasks.push({
+      hour: Math.floor(Math.random() * 12) + 1,
+      minute: Math.floor(Math.random() * 12) * 5,
+    });
+  }
+  return tasks;
 }
 
-function handToClockValues(handLandmarks) {
-  const wrist = handLandmarks[0];
-  const middleTip = handLandmarks[12];
-  const dx = middleTip.x - wrist.x;
-  const dy = middleTip.y - wrist.y;
-
-  const angle = Math.atan2(dx, -dy);
-  const normalizedAngle = (angle + Math.PI * 2) % (Math.PI * 2);
-
-  const minute = Math.round((normalizedAngle / (Math.PI * 2)) * 60) % 60;
-  const hour = ((Math.round((normalizedAngle / (Math.PI * 2)) * 12) + 11) % 12) + 1;
-
-  return { hour, minute };
-}
-
-function drawClock(ctx, hour, minute) {
+function drawClock(ctx, hour, minute, highlight = false) {
   const { width, height } = ctx.canvas;
   const cx = width / 2;
   const cy = height / 2;
@@ -60,7 +58,7 @@ function drawClock(ctx, hour, minute) {
   ctx.clearRect(0, 0, width, height);
 
   ctx.fillStyle = '#0f172a';
-  ctx.strokeStyle = '#94a3b8';
+  ctx.strokeStyle = highlight ? '#22d3ee' : '#94a3b8';
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -68,13 +66,13 @@ function drawClock(ctx, hour, minute) {
   ctx.stroke();
 
   ctx.fillStyle = '#cbd5e1';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
   for (let n = 1; n <= 12; n += 1) {
     const a = toRad(n * 30 - 90);
     const x = cx + Math.cos(a) * (radius - 20);
     const y = cy + Math.sin(a) * (radius - 20);
-    ctx.font = '16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
     ctx.fillText(String(n), x, y);
   }
 
@@ -102,36 +100,44 @@ function drawClock(ctx, hour, minute) {
   ctx.fill();
 }
 
-function updateReadouts() {
+function updateUI() {
+  drawClock(clocks.target, state.targetHour, state.targetMinute, true);
+  targetTimeEl.textContent = formatTime(state.targetHour, state.targetMinute);
+
   for (const key of ['p1', 'p2']) {
     const player = state.players[key];
     readoutEls[key].textContent = formatTime(player.hour, player.minute);
+    scoreEls[key].textContent = `Точки: ${player.score}`;
     drawClock(clocks[key], player.hour, player.minute);
   }
 }
 
-function checkWin() {
-  const targetMinutes = state.targetMinute;
-  const targetHour = state.targetHour % 12;
-
-  const ok = ['p1', 'p2'].every((key) => {
-    const p = state.players[key];
-    if (!p.hasHour || !p.hasMinute) return false;
-    const hourDiff = Math.abs((p.hour % 12) - targetHour);
-    const minuteDiff = Math.abs(p.minute - targetMinutes);
-    return hourDiff <= 0 && minuteDiff <= 2;
-  });
-
-  if (ok) {
-    state.rounds += 1;
-    scoreEl.textContent = `Рундове: ${state.rounds}`;
-    statusEl.textContent = '✅ И двамата успяхте! Нов рунд след 1.2 сек…';
-    setTimeout(generateRound, 1200);
+function nextTask() {
+  if (state.tasks.length === 0) {
+    state.tasks = buildTaskPool();
   }
+  const next = state.tasks.pop();
+  state.targetHour = next.hour;
+  state.targetMinute = next.minute;
+  state.resolvingRound = false;
+  updateUI();
 }
 
-function applyHandToPlayer(playerKey, handedness, handLandmarks) {
-  const values = handToClockValues(handLandmarks);
+function handToClockValues(handLandmarks) {
+  const wrist = handLandmarks[0];
+  const middleTip = handLandmarks[12];
+  const dx = middleTip.x - wrist.x;
+  const dy = middleTip.y - wrist.y;
+  const angle = Math.atan2(dx, -dy);
+  const normalizedAngle = (angle + Math.PI * 2) % (Math.PI * 2);
+
+  const minute = Math.round((normalizedAngle / (Math.PI * 2)) * 60) % 60;
+  const hour = ((Math.round((normalizedAngle / (Math.PI * 2)) * 12) + 11) % 12) + 1;
+  return { hour, minute };
+}
+
+function applyHandToPlayer(playerKey, handedness, landmarks) {
+  const values = handToClockValues(landmarks);
   const player = state.players[playerKey];
 
   if (handedness === 'Right') {
@@ -144,7 +150,50 @@ function applyHandToPlayer(playerKey, handedness, handLandmarks) {
   }
 }
 
+function isPlayerSolved(player) {
+  if (!player.hasHour || !player.hasMinute) return false;
+  const minuteDiff = Math.abs(player.minute - state.targetMinute);
+  const hourMatch = (player.hour % 12) === (state.targetHour % 12);
+  return hourMatch && minuteDiff <= 2;
+}
+
+function resolveRoundIfNeeded() {
+  if (state.gameOver || state.resolvingRound) return;
+
+  const p1Solved = isPlayerSolved(state.players.p1);
+  const p2Solved = isPlayerSolved(state.players.p2);
+  if (!p1Solved && !p2Solved) return;
+
+  state.resolvingRound = true;
+  let winner = null;
+
+  if (p1Solved && !p2Solved) winner = 'p1';
+  if (!p1Solved && p2Solved) winner = 'p2';
+
+  if (!winner) {
+    statusEl.textContent = 'Равенство в този рунд. Нова задача...';
+    setTimeout(nextTask, 900);
+    return;
+  }
+
+  state.players[winner].score += 1;
+  updateUI();
+
+  if (state.players[winner].score >= WIN_POINTS) {
+    state.gameOver = true;
+    const winnerName = winner === 'p1' ? 'Играч 1' : 'Играч 2';
+    statusEl.textContent = `🏆 ${winnerName} печели играта с ${WIN_POINTS} точки!`;
+    return;
+  }
+
+  const winnerName = winner === 'p1' ? 'Играч 1' : 'Играч 2';
+  statusEl.textContent = `✅ ${winnerName} беше пръв и взима точка! Следваща задача...`;
+  setTimeout(nextTask, 900);
+}
+
 function onResults(results) {
+  if (state.gameOver) return;
+
   state.players.p1.hasHour = false;
   state.players.p1.hasMinute = false;
   state.players.p2.hasHour = false;
@@ -152,31 +201,29 @@ function onResults(results) {
 
   if (!results.multiHandLandmarks || !results.multiHandedness) {
     statusEl.textContent = 'Покажете ръце пред камерата.';
-    updateReadouts();
+    updateUI();
     return;
   }
 
-  const count = results.multiHandLandmarks.length;
-
-  for (let i = 0; i < count; i += 1) {
+  for (let i = 0; i < results.multiHandLandmarks.length; i += 1) {
     const landmarks = results.multiHandLandmarks[i];
     const handedness = results.multiHandedness[i].label;
-    const centerX = landmarks.reduce((sum, point) => sum + point.x, 0) / landmarks.length;
+    const centerX = landmarks.reduce((sum, p) => sum + p.x, 0) / landmarks.length;
     const playerKey = centerX < 0.5 ? 'p1' : 'p2';
     applyHandToPlayer(playerKey, handedness, landmarks);
   }
 
-  const p1 = state.players.p1;
-  const p2 = state.players.p2;
-  statusEl.textContent = `Играч 1: ${p1.hasHour ? 'час ✓' : 'час …'}, ${p1.hasMinute ? 'минути ✓' : 'минути …'} | Играч 2: ${p2.hasHour ? 'час ✓' : 'час …'}, ${p2.hasMinute ? 'минути ✓' : 'минути …'}`;
+  if (!state.resolvingRound) {
+    statusEl.textContent = `Играч 1: ${state.players.p1.hasHour ? 'час ✓' : 'час …'}, ${state.players.p1.hasMinute ? 'минути ✓' : 'минути …'} | Играч 2: ${state.players.p2.hasHour ? 'час ✓' : 'час …'}, ${state.players.p2.hasMinute ? 'минути ✓' : 'минути …'}`;
+  }
 
-  updateReadouts();
-  checkWin();
+  updateUI();
+  resolveRoundIfNeeded();
 }
 
 async function init() {
-  updateReadouts();
-  generateRound();
+  state.tasks = buildTaskPool();
+  nextTask();
 
   const hands = new Hands({
     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
@@ -203,7 +250,11 @@ async function init() {
   await camera.start();
 }
 
-document.getElementById('new-round').addEventListener('click', generateRound);
+document.getElementById('new-round').addEventListener('click', () => {
+  if (state.gameOver) return;
+  statusEl.textContent = 'Прескочена задача. Нова цел...';
+  nextTask();
+});
 
 init().catch((error) => {
   console.error(error);
