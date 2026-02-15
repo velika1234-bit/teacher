@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webcam Clock Duel</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>⏰ Clock Duel (2 играчи)</h1>
+        <p>
+          Обща задача: и двамата играчи виждат едно и също време. Който го
+          настрои пръв, взима точка. Първият до 10 точки печели.
+        </p>
+      </header>
+
+      <section class="panel target-panel">
+        <h2>Обща задача</h2>
+        <div class="target-wrap">
+          <canvas id="target-clock" width="320" height="320"></canvas>
+          <div>
+            <p class="target-readout">Нагласи: <strong id="target-time">--:--</strong></p>
+            <p id="status">Чакаме разпознаване на ръце…</p>
+            <button id="new-round" type="button">Следваща задача</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel video-panel">
+        <h2>Камера</h2>
+        <video id="webcam" autoplay playsinline muted></video>
+        <div class="hint">Лява половина: Играч 1 | Дясна половина: Играч 2</div>
+      </section>
+
+      <section class="players-grid">
+        <article class="panel clock-card">
+          <h3>Играч 1</h3>
+          <canvas id="clock-p1" width="280" height="280"></canvas>
+          <p id="readout-p1">--:--</p>
+          <p id="score-p1">Точки: 0</p>
+        </article>
+
+        <article class="panel clock-card">
+          <h3>Играч 2</h3>
+          <canvas id="clock-p2" width="280" height="280"></canvas>
+          <p id="readout-p2">--:--</p>
+          <p id="score-p2">Точки: 0</p>
+        </article>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
